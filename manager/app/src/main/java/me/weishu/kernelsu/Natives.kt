@@ -32,29 +32,29 @@ object Natives {
     const val ROOT_GID = 0
 
     init {
-        System.loadLibrary("kernelsu")
+        //System.loadLibrary("kernelsu")
     }
 
     val version: Int
-        external get
+    get() = 32513
 
     val isSafeMode: Boolean
-        external get
+    get() = false
 
     val isLkmMode: Boolean
-        external get
+    get() = false
 
     val isLkmBundled: Boolean
-        external get
+    get() = false
 
     val isLateLoadMode: Boolean
-        external get
+    get() = false
 
     val isManager: Boolean
-        external get
+    get() = true
 
     val isPrBuild: Boolean
-        external get
+    get() = false
 
     external fun uidShouldUmount(uid: Int): Boolean
 
@@ -121,10 +121,10 @@ object Natives {
     }
 
     val kernelUAPIVersion: Int
-        external get
+    get() = 1
 
     val managerUAPIVersion: Int
-        external get
+    get() = 1
 
     fun isFullFeatured(): Boolean {
         return isManager && kernelUAPIVersion == managerUAPIVersion && rootAvailable()
