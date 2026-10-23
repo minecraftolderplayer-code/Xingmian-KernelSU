@@ -58,14 +58,12 @@ import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.KernelVersion
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-// 修复了这里的 ui 路径
 import me.weishu.kernelsu.ui.component.WarningLevel
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.miuix.WarningCard
-import me.weishu.kernelsu.ui.component.miuix.RobotListPopupMiuix
+// 移除了 RobotListPopupMiuix 的导入
 import me.weishu.kernelsu.ui.component.miuix.StatusTag
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
-import me.weishu.kernelsu.ui.theme.isMiuixTheme
 import me.weishu.kernelsu.ui.util.BlurredBackdrop
 import me.weishu.kernelsu.ui.util.module.LatestVersionInfo
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
@@ -108,10 +106,7 @@ fun HomeMiuix(
                 scrollBehavior = scrollBehavior,
                 backdrop = backdrop,
                 color = barColor,
-                title = stringResource(id = R.string.app_name),
-                actions = {
-                    RobotListPopupMiuix()
-                }
+                title = stringResource(id = R.string.app_name)
             )
         },
         popupHost = { },
@@ -150,7 +145,7 @@ fun HomeMiuix(
                         }
                         if (state.showMiuiWarning) {
                             WarningCard(
-                                stringResource(id = R.string.home_ok, level = WarningLevel.Notice)
+                                stringResource(id = R.string.home_ok), level = WarningLevel.Notice
                             )
                         }
                         if (state.requiresNewKernel) {
@@ -249,26 +244,23 @@ private fun TopBar(
     scrollBehavior: ScrollBehavior,
     backdrop: Backdrop?,
     color: Color,
+    title: String
 ) {
     if (backdrop != null) {
         BlurredBackdrop(backdrop = backdrop) {
             TopAppBar(
                 color = color,
-                title = stringResource(R.string.app_name),
-                actions = {
-                    RobotListPopupMiuix()
-                },
+                title = title,
                 scrollBehavior = scrollBehavior
+                // 移除了右上角的 actions
             )
         }
     } else {
         TopAppBar(
             color = color,
-            title = stringResource(R.string.app_name),
-            actions = {
-                RobotListPopupMiuix()
-            },
+            title = title,
             scrollBehavior = scrollBehavior
+            // 移除了右上角的 actions
         )
     }
 }
