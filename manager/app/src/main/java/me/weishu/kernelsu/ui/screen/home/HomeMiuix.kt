@@ -28,15 +28,13 @@ fun HomeMiuix(
     actions: HomeActions,
     bottomInnerPadding: Dp
 ) {
-    val scrollBehavior = MiuixScrollBehavior()
-    // 直接使用主题颜色作为顶栏背景
     val barColor = colorScheme.surface
 
     Scaffold(
         topBar = {
             TopBar(
-                scrollBehavior = scrollBehavior,
-                backdrop = null, // 强制取消模糊，防报错
+                // 移除了 scrollBehavior 参数
+                backdrop = null, // 强制取消模糊
                 color = barColor,
                 title = stringResource(id = R.string.app_name),
                 actions = {
@@ -50,9 +48,9 @@ fun HomeMiuix(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
+                // 移除了 nestedScroll(scrollBehavior.nestedScrollConnection)
                 .scrollEndHaptic()
                 .overscrollVertical()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(horizontal = 12.dp),
             contentPadding = innerPadding
         ) {
