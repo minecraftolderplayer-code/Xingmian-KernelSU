@@ -56,49 +56,22 @@ object Natives {
     val isPrBuild: Boolean
     get() = false
 
-    external fun uidShouldUmount(uid: Int): Boolean
+    fun uidShouldUmount(uid: Int): Boolean = false
 
-    /**
-     * Get the profile of the given package.
-     * @param key usually the package name
-     * @return return null if failed.
-     */
-    external fun getAppProfile(key: String?, uid: Int): Profile
-    external fun setAppProfile(profile: Profile?): Boolean
+    fun getAppProfile(key: String?, uid: Int): Profile = Profile(name = "root")
+    fun setAppProfile(profile: Profile?): Boolean = true
 
-    /**
-     * `su` compat mode can be disabled temporarily.
-     *  0: disabled
-     *  1: enabled
-     *  negative : error
-     */
-    external fun isSuEnabled(): Boolean
-    external fun setSuEnabled(enabled: Boolean): Boolean
+    fun isSuEnabled(): Boolean = true
+    fun setSuEnabled(enabled: Boolean):    Boolean = true
 
-    /**
-     * Kernel module umount can be disabled temporarily.
-     *  0: disabled
-     *  1: enabled
-     *  negative : error
-     */
-    external fun isKernelUmountEnabled(): Boolean
-    external fun setKernelUmountEnabled(enabled: Boolean): Boolean
+    fun isKernelUmountEnabled(): Boolean = true
+    fun setKernelUmountEnabled(enabled: Boolean): Boolean = true
 
-    /**
-     * SELinux hide can be disabled temporarily.
-     *  0: disabled
-     *  1: enabled
-     *  negative : error
-     */
-    external fun isSelinuxHideEnabled(): Boolean
-    external fun setSelinuxHideEnabled(enabled: Boolean): Int
+    fun isSelinuxHideEnabled(): Boolean = false
+    fun setSelinuxHideEnabled(enabled: Boolean): Int = 0
 
-    /**
-     * Get the user name for the uid.
-     */
-    external fun getUserName(uid: Int): String?
-
-    external fun getSuperuserCount(): Int
+    fun getUserName(uid: Int): String? = "root"
+    fun getSuperuserCount(): Int = 1
 
     private const val NON_ROOT_DEFAULT_PROFILE_KEY = "$"
     private const val NOBODY_UID = 9999
