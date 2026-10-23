@@ -18,11 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.PrivilegeManager
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.rememberBlurBackdrop // 这里补上了毛玻璃所需的导入
 
 @Composable
 fun HomeMiuix(
@@ -31,18 +29,14 @@ fun HomeMiuix(
     bottomInnerPadding: Dp
 ) {
     val scrollBehavior = MiuixScrollBehavior()
-    
-    // 恢复毛玻璃效果
-    val enableBlur = LocalEnableBlur.current
-    val backdrop = rememberBlurBackdrop(enableBlur)
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) colorScheme.surface.copy(alpha = 0.7f) else colorScheme.surface
+    // 直接使用主题颜色作为顶栏背景
+    val barColor = colorScheme.surface
 
     Scaffold(
         topBar = {
             TopBar(
                 scrollBehavior = scrollBehavior,
-                backdrop = backdrop, // 传回背景
+                backdrop = null, // 强制取消模糊，防报错
                 color = barColor,
                 title = stringResource(id = R.string.app_name),
                 actions = {
