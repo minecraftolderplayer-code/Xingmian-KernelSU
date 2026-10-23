@@ -61,8 +61,6 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.WarningLevel
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.miuix.WarningCard
-// 移除了 RobotListPopupMiuix 的导入
-import me.weishu.kernelsu.ui.component.miuix.StatusTag
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.util.BlurredBackdrop
 import me.weishu.kernelsu.ui.util.module.LatestVersionInfo
@@ -252,7 +250,6 @@ private fun TopBar(
                 color = color,
                 title = title,
                 scrollBehavior = scrollBehavior
-                // 移除了右上角的 actions
             )
         }
     } else {
@@ -260,7 +257,6 @@ private fun TopBar(
             color = color,
             title = title,
             scrollBehavior = scrollBehavior
-            // 移除了右上角的 actions
         )
     }
 }
@@ -366,26 +362,7 @@ private fun StatusCard(
                                         modifier = Modifier.weight(1f, fill = false),
                                         fontSize = 15.sp
                                     )
-                                    if (state.showCustomKsuBadge) {
-                                        Spacer(Modifier.width(8.dp))
-                                        StatusTag(
-                                            label = stringResource(R.string.home_ksu_custom),
-                                            contentColor = if (isDynamicColor()) {
-                                                colorScheme.onTertiaryContainer
-                                            } else if (isSystemInDarkTheme()) {
-                                                Color(0xFFB6E8C5)
-                                            } else {
-                                                Color(0xFF164A29)
-                                            },
-                                            backgroundColor = if (isDynamicColor()) {
-                                                colorScheme.tertiaryContainer
-                                            } else if (isSystemInDarkTheme()) {
-                                                Color(0xFF31503E)
-                                            } else {
-                                                Color(0xFFB6E8C5)
-                                            }
-                                        )
-                                    }
+                                    // 彻底移除了 StatusTag，防止编译报错
                                 }
                             }
                         }
