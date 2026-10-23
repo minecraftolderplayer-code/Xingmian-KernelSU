@@ -58,8 +58,9 @@ import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.KernelVersion
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.component.WarningLevel
-import me.weishu.kernelsu.component.dialog.rememberConfirmDialog
+// 修复了这里的 ui 路径
+import me.weishu.kernelsu.ui.component.WarningLevel
+import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.miuix.WarningCard
 import me.weishu.kernelsu.ui.component.miuix.RobotListPopupMiuix
 import me.weishu.kernelsu.ui.component.miuix.StatusTag
