@@ -1,218 +1,68 @@
 package me.weishu.kernelsu.ui.screen.module
 
-import android.Manifest
-import android.content.Intent
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
-import me.weishu.kernelsu.R
-import me.weishu.kernelsu.data.script.ScriptRepository
-import me.weishu.kernelsu.ui.LocalUiMode
-import me.weishu.kernelsu.ui.UiMode
-import me.weishu.kernelsu.ui.component.SearchStatus
-import me.weishu.kernelsu.ui.navigation3.LocalNavigator
-import me.weishu.kernelsu.ui.navigation3.Route
-import me.weishu.kernelsu.ui.screen.flash.FlashIt
-import me.weishu.kernelsu.ui.screen.modulerepo.downloadFailureMessage
-import me.weishu.kernelsu.ui.screen.scriptrun.ScriptRunArg
-import me.weishu.kernelsu.ui.util.download
-import me.weishu.kernelsu.ui.util.module.Shortcut
-import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
-import me.weishu.kernelsu.ui.webui.WebUIActivity
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import me.weishu.kernelsu.MyModuleManager
 
 @Composable
 fun ModulePager(
     bottomInnerPadding: Dp,
     isCurrentPage: Boolean = true,
 ) {
-    val uiMode = LocalUiMode.current
-    val navigator = LocalNavigator.current
     val context = LocalContext.current
-    val resource = LocalResources.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel = viewModel<ModuleViewModel>()
-    val scope = rememberCoroutineScope()
-    val rawUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 每次进入页面重新读取我们自己的沙盒模块
+    val myModules = remember { MyModuleManager.getLocalModules(context) }
 
-    val webUILauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { viewModel.fetchModuleList(resort = false) }
-
-    // Request notification permission for download progress notifications
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { /* Download works regardless of result */ }
-    val latestIsCurrentPage by rememberUpdatedState(isCurrentPage)
-    val initialResumeHandled = rememberSaveable { mutableStateOf(false) }
-
-    var hasActivated by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(isCurrentPage) {
-        if (isCurrentPage) {
-            if (!hasActivated) {
-                hasActivated = true
-                viewModel.refreshEnvironmentState()
-                viewModel.initializePreferences()
-                val state = viewModel.uiState.value
-                if (!state.hasLoaded && !state.isRefreshing) {
-                    viewModel.fetchModuleList()
-                }
-                if (Build.VERSION.SDK_INT >= 33) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = bottomInnerPadding)
+    ) {
+        if (myModules.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("暂无模块，点击右上角导入", color = Color.Gray)
             }
-        } else if (!rawUiState.searchStatus.isCollapsed()) {
-            viewModel.updateSearchStatus(rawUiState.searchStatus.copy(searchText = "", current = SearchStatus.Status.COLLAPSED))
-        }
-    }
-
-    LifecycleResumeEffect(Unit) {
-        if (initialResumeHandled.value && latestIsCurrentPage) {
-            val state = viewModel.uiState.value
-            if (!state.isRefreshing) {
-                viewModel.fetchModuleList(
-                    checkUpdate = !state.hasLoaded || viewModel.isNeedRefresh,
-                    resort = !state.hasLoaded,
-                )
-            }
-        }
-        initialResumeHandled.value = true
-        onPauseOrDispose {}
-    }
-
-    val actions = ModuleActions(
-        onRefresh = {
-            viewModel.fetchModuleList(checkUpdate = true)
-        },
-        onSearchStatusChange = {
-            viewModel.updateSearchStatus(it)
-        },
-        onSearchTextChange = { text ->
-            viewModel.updateSearchText(text)
-        },
-        onClearSearch = {
-            viewModel.updateSearchText("")
-        },
-        onRequestUpdateConfirmation = { module, updateInfo ->
-            viewModel.requestUpdateConfirmation(module, updateInfo)
-        },
-        onRequestUninstallConfirmation = { module ->
-            viewModel.requestUninstallConfirmation(module)
-        },
-        onDismissConfirmRequest = {
-            viewModel.dismissConfirmRequest()
-        },
-        onConfirmUpdate = { request ->
-            scope.launch {
-                download(
-                    url = request.downloadUrl,
-                    fileName = request.fileName,
-                    // Registry releases are size + SHA-256 checked, kept app-private and
-                    // re-verified by the flash step; other updateJson sources are unchanged.
-                    expected = request.expected,
-                    onFailed = { failed ->
-                        viewModel.emitEffect(
-                            ModuleEffect.Toast(downloadFailureMessage(context, failed, request.fileName))
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(myModules.size) { index ->
+                    val module = myModules[index]
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
-                    },
-                    onDownloaded = { uri ->
-                        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                            navigator.push(Route.Flash(FlashIt.FlashModules(listOf(uri))))
-                            viewModel.markNeedRefresh()
-                        }
-                    },
-                    onDownloading = {
-                        viewModel.emitEffect(
-                            ModuleEffect.Toast(
-                                resource.getString(R.string.module_downloading).format(request.module.name)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = module.name,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
                             )
-                        )
-                    },
-                )
-            }
-            viewModel.dismissConfirmRequest()
-        },
-        onOpenRepo = { navigator.push(Route.ModuleRepo) },
-        onToggleSortActionFirst = {
-            viewModel.toggleSortActionFirst()
-        },
-        onToggleSortEnabledFirst = {
-            viewModel.toggleSortEnabledFirst()
-        },
-        onOpenWebUi = { module ->
-            webUILauncher.launch(
-                Intent(context, WebUIActivity::class.java)
-                    .setData(
-                        Shortcut.buildShortcutUri(module.id, ShortcutType.WebUI)
-                    )
-            )
-        },
-        onToggleModule = { module ->
-            viewModel.toggleModule(module)
-        },
-        onUninstallModule = { module ->
-            viewModel.uninstallModule(module)
-        },
-        onUndoUninstallModule = { module ->
-            viewModel.undoUninstallModule(module)
-        },
-        onOpenFlash = { uris ->
-            if (uris.size == 1) {
-                // A one-shot script ZIP is offered to be run instead (or installed anyway).
-                scope.launch {
-                    val script = ScriptRepository.peekOneshot(uris.first())
-                    if (script != null) {
-                        navigator.push(
-                            Route.ScriptRun(ScriptRunArg(uris.first(), offerInstall = true, displayName = script.name))
-                        )
-                    } else {
-                        navigator.push(Route.Flash(FlashIt.FlashModules(uris)))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "v${module.version}",
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
-                    viewModel.markNeedRefresh()
                 }
-            } else if (uris.isNotEmpty()) {
-                navigator.push(Route.Flash(FlashIt.FlashModules(uris)))
-                viewModel.markNeedRefresh()
             }
-        },
-        onExecuteModuleAction = { module ->
-            navigator.push(Route.ExecuteModuleAction(module.id))
-            viewModel.markNeedRefresh()
-        },
-    )
-
-    when (uiMode) {
-        UiMode.Miuix -> ModulePagerMiuix(
-            uiState = rawUiState,
-            confirmDialogState = rawUiState.confirmDialogState,
-            moduleEvent = viewModel.moduleEvent,
-            actions = actions,
-            bottomInnerPadding = bottomInnerPadding,
-        )
-
-        UiMode.Material -> ModulePagerMaterial(
-            uiState = rawUiState,
-            confirmDialogState = rawUiState.confirmDialogState,
-            moduleEvent = viewModel.moduleEvent,
-            actions = actions,
-            bottomInnerPadding = bottomInnerPadding,
-        )
+        }
     }
 }
