@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.screen.home
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,9 +18,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.PrivilegeManager
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import top.yukonga.miuix.kmp.utils.rememberBlurBackdrop // 这里补上了毛玻璃所需的导入
 
 @Composable
 fun HomeMiuix(
@@ -30,6 +31,8 @@ fun HomeMiuix(
     bottomInnerPadding: Dp
 ) {
     val scrollBehavior = MiuixScrollBehavior()
+    
+    // 恢复毛玻璃效果
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
@@ -39,11 +42,10 @@ fun HomeMiuix(
         topBar = {
             TopBar(
                 scrollBehavior = scrollBehavior,
-                backdrop = backdrop,
+                backdrop = backdrop, // 传回背景
                 color = barColor,
                 title = stringResource(id = R.string.app_name),
                 actions = {
-                    // 官方原版的右上角菜单保留
                     RobotListPopupMiuix()
                 }
             )
@@ -69,7 +71,6 @@ fun HomeMiuix(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // 直接进入状态卡片，去掉了红条和黄条
                     StatusCard(
                         state = state,
                         actions = actions
@@ -98,7 +99,6 @@ private fun StatusCard(
     actions: HomeActions,
 ) {
     val context = LocalContext.current
-    // 获取我们的权限状态
     val currentMode = PrivilegeManager.currentMode
     val workingText = when (currentMode) {
         PrivilegeManager.Mode.ROOT -> "Root 模式"
@@ -120,7 +120,6 @@ private fun StatusCard(
                 }
             ),
             onClick = {
-                // 如果没激活，点击卡片强行去请求一次权限（唤醒 Shizuku）
                 if (currentMode == PrivilegeManager.Mode.NONE) {
                     Thread { PrivilegeManager.detectAndInit(context) }.start()
                 }
@@ -155,7 +154,6 @@ private fun StatusCard(
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(4.dp))
-                    // 这里读取底层写死的版本号（32513）
                     Text(
                         text = "版本: ${state.ksuVersion ?: "32513"}-1",
                         fontSize = 15.sp,
