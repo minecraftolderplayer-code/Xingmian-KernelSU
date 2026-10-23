@@ -6,17 +6,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.weishu.kernelsu.KernelVersion
-import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.PrivilegeManager
 import me.weishu.kernelsu.R
 import top.yukonga.miuix.kmp.basic.*
@@ -97,6 +97,7 @@ private fun StatusCard(
     state: HomeUiState,
     actions: HomeActions,
 ) {
+    val context = LocalContext.current
     // 获取我们的权限状态
     val currentMode = PrivilegeManager.currentMode
     val workingText = when (currentMode) {
@@ -119,9 +120,9 @@ private fun StatusCard(
                 }
             ),
             onClick = {
-                // 如果没激活，点击卡片尝试去请求权限
+                // 如果没激活，点击卡片强行去请求一次权限（唤醒 Shizuku）
                 if (currentMode == PrivilegeManager.Mode.NONE) {
-                    actions.onInstallClick()
+                    Thread { PrivilegeManager.detectAndInit(context) }.start()
                 }
             }
         ) {
