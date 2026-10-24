@@ -242,6 +242,7 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
+    implementation("dev.mobile:dadb:1.2.9")
 
     testImplementation(libs.junit)
 implementation("dev.rikka.shizuku:api:13.0.0")
