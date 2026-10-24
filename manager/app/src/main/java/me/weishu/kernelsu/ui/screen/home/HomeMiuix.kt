@@ -1,5 +1,6 @@
 package me.weishu.kernelsu.ui.screen.home
 
+import me.weishu.kernelsu.PrivilegeManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -242,6 +243,7 @@ private fun TopBar(
 
 @Composable
 private fun StatusCard(
+    val context = androidx.compose.ui.platform.LocalContext.current
     state: HomeUiState,
     actions: HomeActions,
 ) {
@@ -279,10 +281,25 @@ private fun StatusCard(
                             }
                         ),
                         onClick = {
-                            if (!state.isLateLoadMode) {
-                                actions.onInstallClick()
-                            }
-                        },
+    android.widget.Toast.makeText(context, "正在尝试连接本地 ADB 桥接...", android.widget.Toast.LENGTH_SHORT).show()
+    Thread {
+        PrivilegeManager.detectAndInit(context)
+        val mode = PrivilegeManager.currentMode
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            when (mode) {
+                PrivilegeManager.Mode.LOCAL_ADB -> android.widget.Toast.makeText(context, "本地 ADB 连接成功！", android.widget.Toast.LENGTH_SHORT).show()
+                PrivilegeManager.Mode.ROOT -> android.widget.Toast.makeText(context, "Root 权限已激活！", android.widget.Toast.LENGTH_SHORT).show()
+                PrivilegeManager.Mode.SHIZUKU -> android.widget.Toast.makeText(context, "Shizuku 授权成功！", android.widget.Toast.LENGTH_SHORT).show()
+                else -> {
+                    android.widget.Toast.makeText(context, "连接失败，请检查是否开启了 5555 端口", android.widget.Toast.LENGTH_LONG).show()
+                    if (!state.isLateLoadMode) {
+                        actions.onInstallClick()
+                    }
+                }
+            }
+        }
+    }.start()
+},
                         showIndication = !state.isLateLoadMode,
                         pressFeedbackType = PressFeedbackType.Tilt
                     ) {
