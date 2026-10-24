@@ -36,7 +36,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
-// 注意：入口函数名保持 HomePagerMiuix，以匹配官方调用
 @Composable
 fun HomePagerMiuix(
     state: HomeUiState,
@@ -82,11 +81,9 @@ fun HomePagerMiuix(
 @Composable
 private fun StatusCard(state: HomeUiState, actions: HomeActions) {
     val context = LocalContext.current
-    // 使用 Compose 的状态来触发提示
     var showLoading by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf<String?>(null) }
 
-    // 监听检测结果并触发 UI 提示
     LaunchedEffect(showLoading) {
         if (showLoading) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -126,7 +123,13 @@ private fun StatusCard(state: HomeUiState, actions: HomeActions) {
                     pressFeedbackType = PressFeedbackType.Tilt
                 ) {
                     Box(modifier = Modifier.fillMaxSize().offset(27.dp, 31.dp), contentAlignment = Alignment.BottomEnd) {
-                        Icon(Modifier.size(100.dp), Icons.Rounded.CheckCircleOutline, null, tint = Color(0xFF3D6D7))
+                        // 修复了这里的参数顺序：imageVector 必须是第一位
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(100.dp),
+                            tint = Color(0xFF3D6D7)
+                        )
                     }
                     if (workingMode != null) {
                         Box(modifier = Modifier.fillMaxSize().padding(16.dp, 18.dp), contentAlignment = Alignment.BottomStart) {
@@ -149,7 +152,14 @@ private fun StatusCard(state: HomeUiState, actions: HomeActions) {
                 BasicComponent(
                     title = stringResource(R.string.home_not_installed),
                     summary = stringResource(R.string.home_click_to_install),
-                    startAction = { Icon(Icons.Rounded.ErrorOutline, null, Modifier.padding(end = 6.dp)) }
+                    startAction = { 
+                        // 修复了这里的参数顺序
+                        Icon(
+                            imageVector = Icons.Rounded.ErrorOutline,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) 
+                    }
                 )
             }
         }
@@ -178,13 +188,27 @@ private fun SupportLinks(onOpenUrl: (String) -> Unit, modifier: Modifier = Modif
         ArrowPreference(
             title = stringResource(R.string.home_support_title),
             summary = stringResource(R.string.home_support_content),
-            startAction = { Icon(Icons.Filled.VolunteerActivism, null, Modifier.padding(end = 6.dp)) },
+            startAction = { 
+                // 修复了这里的参数顺序
+                Icon(
+                    imageVector = Icons.Filled.VolunteerActivism,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                ) 
+            },
             onClick = { onOpenUrl("https://patreon.com/weishu") }
         )
         ArrowPreference(
             title = stringResource(R.string.home_learn_kernelsu),
             summary = stringResource(R.string.home_click_to_learn_kernelsu),
-            startAction = { Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.padding(end = 6.dp)) },
+            startAction = { 
+                // 修复了这里的参数顺序
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                ) 
+            },
             onClick = { onOpenUrl(stringResource(R.string.home_learn_kernelsu_url)) }
         )
     }
@@ -216,7 +240,12 @@ private fun InfoCard(systemInfo: SystemInfo, modifier: Modifier = Modifier) {
 @Composable
 private fun InfoText(icon: ImageVector, title: String, content: String, bottomPadding: Dp = 24.dp) {
     Row(Modifier.fillMaxWidth().padding(bottom = bottomPadding), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, title, Modifier.padding(end = 12.dp).size(24.dp), tint = colorScheme.onSurface)
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            modifier = Modifier.padding(end = 12.dp).size(24.dp),
+            tint = colorScheme.onSurface
+        )
         Column {
             Text(title, fontSize = MiuixTheme.textStyles.headline1.fontSize, fontWeight = FontWeight.Medium)
             Text(content, fontSize = MiuixTheme.textStyles.body2.fontSize, color = colorScheme.onSurfaceVariantSummary, modifier = Modifier.padding(top = 2.dp))
