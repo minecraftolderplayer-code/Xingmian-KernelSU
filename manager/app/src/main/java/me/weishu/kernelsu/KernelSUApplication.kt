@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.UserManager
-import android.system.Os
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -31,7 +30,7 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
         }
     }
 
-    lateinit var okhttpClient: OkHttpClient
+    lateinit var okHttpClient: OkHttpClient
     private val appViewModelStore by lazy { ViewModelStore() }
 
     private fun isUserUnlocked(): Boolean =
@@ -39,19 +38,18 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
 
     override fun onCreate() {
         super.onCreate()
-        // 延迟 2 秒后在后台尝试连本地 ADB
-    Thread {
-    try {
-        Thread.sleep(2000)
-        PrivilegeManager.detectAndInit(applicationContext)
-        if (PrivilegeManager.currentMode == PrivilegeManager.Mode.LOCAL_ADB) {
-            android.util.Log.d("KernelSU", "后台自动连上本地 ADB 啦！")
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}.start()
+        ksuApp = this
+
+        // 👇 这里是大括号完美闭合的后台启动代码 👇
+        Thread {
+            try {
+                Thread.sleep(2000)
+                PrivilegeManager.detectAndInit(applicationContext)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }.start()
+        // 👆 大括号结束 👆
 
         if (!isUserUnlocked()) {
             return
@@ -70,19 +68,6 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
         if (!webroot.exists()) {
             webroot.mkdir()
         }
-
-        // Provide working env for rust's temp_dir()
-        Os.setenv("TMPDIR", cacheDir.absolutePath, true)
-
-        okhttpClient =
-            OkHttpClient.Builder().cache(Cache(File(cacheDir, "okhttp"), 10 * 1024 * 1024))
-                .addInterceptor { block ->
-                    block.proceed(
-                        block.request().newBuilder()
-                            .header("User-Agent", "KernelSU/${BuildConfig.VERSION_CODE}")
-                            .header("Accept-Language", Locale.getDefault().toLanguageTag()).build()
-                    )
-                }.build()
     }
 
     override val viewModelStore: ViewModelStore
