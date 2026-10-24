@@ -1,6 +1,9 @@
 package me.weishu.kernelsu.ui.screen.module
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.MyModuleManager
+import me.weishu.kernelsu.PrivilegeManager
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import java.io.File
@@ -34,7 +38,6 @@ data class RepoModule(
     val zipUrl: String
 )
 
-// 👇 这里就是我们内置的纯 ADB/Shizuku 专属模块库 👇
 val adbModulesRepo = listOf(
     RepoModule(
         id = "autotcp",
@@ -49,13 +52,6 @@ val adbModulesRepo = listOf(
         version = "1.1",
         description = "无需每次手动配置，开机自动尝试通过 Shell 激活 ADB 调试服务。",
         zipUrl = "https://github.com/lowji194/Module-Magisk/raw/refs/heads/main/Auto_ADB_Enable.zip"
-    ),
-    RepoModule(
-        id = "adb_screenshot",
-        name = "ADB 屏幕截图辅助",
-        version = "2.0",
-        description = "利用 Shell 权限接管系统截图，支持无损画质保存，无需 Root。",
-        zipUrl = "https://github.com/AdguardTeam/AdGuardHome/raw/master/snapshots/AdGuardHome_linux_arm64.tar.gz" // 这是一个备用真实链接测试下载速度
     )
 )
 
@@ -69,6 +65,24 @@ fun ModulePager(
     var localModules by remember { mutableStateOf(MyModuleManager.getLocalModules(context)) }
     var showStore by remember { mutableStateOf(false) }
     var downloadingId by remember { mutableStateOf<String?>(null) }
+
+    // 本地导入 ZIP 选择器
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val success = MyModuleManager.importLocalModule(context, uri)
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        Toast.makeText(context, "导入成功", Toast.LENGTH_SHORT).show()
+                        localModules = MyModuleManager.getLocalModules(context)
+                        showStore = false
+                    } else {
+                        Toast.makeText(context, "导入失败：不是有效的模块", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -86,10 +100,18 @@ fun ModulePager(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
-            TextButton(
-                text = if (showStore) "返回本地" else "浏览仓库",
-                onClick = { showStore = !showStore }
-            )
+            Row {
+                if (!showStore) {
+                    TextButton(
+                        text = "导入",
+                        onClick = { filePicker.launch("application/zip") }
+                    )
+                }
+                TextButton(
+                    text = if (showStore) "返回本地" else "浏览仓库",
+                    onClick = { showStore = !showStore }
+                )
+            }
         }
 
         if (showStore) {
@@ -111,18 +133,8 @@ fun ModulePager(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(module.name, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text(
-                                    text = "v${module.version} · ${module.id}",
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
-                                Text(
-                                    text = module.description,
-                                    fontSize = 13.sp,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                                Text(text = "v${module.version} · ${module.id}", fontSize = 12.sp, color = Color.Gray)
+                                Text(text = module.description, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                             }
                             TextButton(
                                 text = if (downloadingId == module.id) "安装中" else "下载",
@@ -149,10 +161,9 @@ fun ModulePager(
                 }
             }
         } else {
-            // 本地模块展示逻辑
             if (localModules.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("暂无模块，请去仓库浏览", color = Color.Gray)
+                    Text("暂无模块，请导入或去仓库下载", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -166,9 +177,48 @@ fun ModulePager(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.defaultColors(color = colorScheme.surface)
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(module.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("v${module.version}", fontSize = 14.sp, color = Color.Gray)
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(module.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("v${module.version}", fontSize = 14.sp, color = Color.Gray)
+                                }
+                                TextButton(
+                                    text = "启动",
+                                    onClick = {
+                                        scope.launch(Dispatchers.IO) {
+                                            // 尝试去执行模块里的 service.sh 或 post-fs-data.sh
+                                            val moduleDir = File(context.filesDir, "modules/${module.id}")
+                                            val serviceSh = File(moduleDir, "service.sh")
+                                            val postFsDataSh = File(moduleDir, "post-fs-data.sh")
+                                            
+                                            var cmd = ""
+                                            if (serviceSh.exists()) {
+                                                cmd = "sh ${serviceSh.absolutePath}"
+                                            } else if (postFsDataSh.exists()) {
+                                                cmd = "sh ${postFsDataSh.absolutePath}"
+                                            } else {
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(context, "此模块没有可执行脚本", Toast.LENGTH_SHORT).show()
+                                                }
+                                                return@launch
+                                            }
+
+                                            // 调用我们的双模式执行器！
+                                            val result = PrivilegeManager.exec(cmd)
+                                            withContext(Dispatchers.Main) {
+                                                if (result.isNotEmpty()) {
+                                                    Toast.makeText(context, "脚本已执行", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "执行失败或无输出，请检查权限", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
@@ -178,6 +228,7 @@ fun ModulePager(
     }
 }
 
+// 下载与解压逻辑保持不变
 fun downloadAndUnzipModule(context: android.content.Context, urlStr: String): Boolean {
     return try {
         val tempFile = File(context.cacheDir, "temp_module.zip")
@@ -215,7 +266,6 @@ fun downloadAndUnzipModule(context: android.content.Context, urlStr: String): Bo
         if (targetDir.exists()) targetDir.deleteRecursively()
         targetDir.mkdirs()
 
-        // 解压
         ZipInputStream(tempFile.inputStream()).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
@@ -230,7 +280,6 @@ fun downloadAndUnzipModule(context: android.content.Context, urlStr: String): Bo
             }
         }
         
-        // 判断模块合法性
         val propFile = File(targetDir, "module.prop")
         if (propFile.exists()) {
             var id = "downloaded_module"
@@ -242,12 +291,8 @@ fun downloadAndUnzipModule(context: android.content.Context, urlStr: String): Bo
             targetDir.renameTo(finalDir)
             true
         } else {
-            // 如果下载的是普通压缩包没有 prop，就随便起个名字
-            val finalDir = File(context.filesDir, "modules/downloaded_${System.currentTimeMillis()}")
-            targetDir.renameTo(finalDir)
-            // 造一个假的 prop 文件方便列表读取
-            File(finalDir, "module.prop").writeText("id=${finalDir.name}\nname=ADB脚本模块\nversion=1.0")
-            true
+            targetDir.deleteRecursively()
+            false
         }
     } catch (e: Exception) {
         e.printStackTrace()
