@@ -242,7 +242,9 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
-    implementation("dev.mobile:dadb:1.2.9")
+    implementation("dev.mobile:dadb:1.2.9") {
+    exclude(group = "org.bouncycastle")
+}
 
     testImplementation(libs.junit)
 implementation("dev.rikka.shizuku:api:13.0.0")
