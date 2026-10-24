@@ -125,6 +125,34 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         splashStartedAt = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
+        // 接收来自 ShellService 的授权请求广播
+        val permissionReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+        val pkgName = intent?.getStringExtra("pkg_name") ?: return
+        
+        // 切换回主线程弹窗
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("Root 授权请求")
+                .setMessage("应用 $pkgName 正在请求 Root 权限。\n\n是否授予其通过底层 ADB 执行命令的权限？")
+                .setPositiveButton("允许") { _, _ ->
+                    // 用户点击允许，写入白名单
+                    getSharedPreferences("su_allowed_apps", MODE_PRIVATE)
+                        .edit().putBoolean(pkgName, true).apply()
+                }
+                .setNegativeButton("拒绝", null)
+                .show()
+        }
+    }
+}
+
+      // 注册广播 (Android 13+ 需要指定 RECEIVER_EXPORTED/NOT_EXPORTED)
+       val filter = android.content.IntentFilter("me.weishu.kernelsu.REQUEST_PERMISSION")
+       if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+    registerReceiver(permissionReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+} else {
+    registerReceiver(permissionReceiver, filter)
+}
         splashScreen.setKeepOnScreenCondition {
             !contentReady || SystemClock.uptimeMillis() - splashStartedAt < splashAnimationDurationMs
         }
