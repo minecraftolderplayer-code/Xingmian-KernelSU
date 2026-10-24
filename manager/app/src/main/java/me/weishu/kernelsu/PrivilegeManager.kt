@@ -32,9 +32,12 @@ object PrivilegeManager {
         // 2. 尝试本地 ADB 桥接 (dadb)
         try {
             if (cachedKeyPair == null) {
+                // 纯内存生成密钥对，不依赖任何文件！
                 cachedKeyPair = AdbKeyPair.generate()
             }
+            
             Log.d("PrivilegeManager", "正在尝试连接 127.0.0.1:5555 ...")
+            // dadb 的标准连接方式
             val adb = Dadb.create("127.0.0.1", 5555, cachedKeyPair!!)
             val result = adb.shell("id").output
             
