@@ -38,11 +38,11 @@ fun ModulePager(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp)
-            .padding(bottom = bottomInnerPadding)
+            // 关键点：处理底栏的边距，防止吃到底部导航栏
+            .padding(bottom = bottomInnerPadding) 
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -58,25 +58,28 @@ fun ModulePager(
         }
 
         if (showStore) {
-            // 模块下载源列表
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable {
                             if (isDownloading) return@clickable
                             isDownloading = true
                             scope.launch(Dispatchers.IO) {
-                                // 👇 这里换成你的 ADB 模块直链下载地址 👇
-                                val adbModuleUrl = "https://github.com/你的仓库/raw/main/adb_module.zip" 
+                                // 换成你的直链
+                                val adbModuleUrl = "https://github.com/你的仓库/raw/main/adb_module.zip"
                                 val success = downloadModule(context, adbModuleUrl)
                                 withContext(Dispatchers.Main) {
                                     isDownloading = false
                                     if (success) {
-                                        Toast.makeText(context, "下载并解压成功！", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "下载成功！", Toast.LENGTH_SHORT).show()
                                         myModules = MyModuleManager.getLocalModules(context)
-                                        showStore = false // 自动切回本地列表
+                                        showStore = false 
                                     } else {
-                                        Toast.makeText(context, "下载失败，检查网络", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "下载失败", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -85,7 +88,7 @@ fun ModulePager(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(if (isDownloading) "正在下载中..." else "ADB 无线调试增强模块", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("提供底层无线调试增强，点击下载", fontSize = 14.sp, color = Color.Gray)
+                            Text("点击下载并解压", fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -96,7 +99,11 @@ fun ModulePager(
                     Text("暂无模块，请去仓库下载", color = Color.Gray)
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     items(myModules.size) { index ->
                         val module = myModules[index]
                         Card(
@@ -115,7 +122,6 @@ fun ModulePager(
     }
 }
 
-// 核心下载解压逻辑
 fun downloadModule(context: android.content.Context, urlStr: String): Boolean {
     return try {
         val url = URL(urlStr)
@@ -126,23 +132,18 @@ fun downloadModule(context: android.content.Context, urlStr: String): Boolean {
         connection.connect()
 
         if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-            // 保存到缓存
             val tempFile = File(context.cacheDir, "temp_module.zip")
             connection.inputStream.use { input ->
                 FileOutputStream(tempFile).use { output ->
                     input.copyTo(output)
                 }
             }
-            // 借用 MyModuleManager 的逻辑解压（这里需要在你的 MyModuleManager 里加一个 importModule 方法）
-            // 如果嫌麻烦，可以先用最简单的重命名存进去，反正后续我们会完善
             val targetDir = File(context.filesDir, "modules/adb_module")
             if (targetDir.exists()) targetDir.deleteRecursively()
             targetDir.mkdirs()
             
-            // 这里为了不报错，我们先直接把文件塞进去（后续如果模块合法，可以解析 module.prop）
             val outZip = File(targetDir, "module.zip")
             tempFile.copyTo(outZip, overwrite = true)
-            
             true
         } else {
             false
