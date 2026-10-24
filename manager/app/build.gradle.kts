@@ -251,15 +251,8 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
-    // 1. 引入 dadb 库
-    implementation("dev.mobile:dadb:1.2.9") {
-    // 排除 Android 系统自带的旧版加密库，防止冲突
-    exclude(group = "org.bouncycastle")
-}
-    // 2. 引入适配 Android 的加密库
+    implementation("dev.mobile:dadb:1.2.9")
     implementation("org.bouncycastle:bcprov-jdk15to18:1.72")
-
-    // 3. 强制统一 kotlinx-serialization 版本（极其关键，否则会满屏报红）
     implementation(platform("org.jetbrains.kotlinx:kotlinx-serialization-bom:1.6.3"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
