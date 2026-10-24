@@ -576,7 +576,10 @@ fun reboot(reason: String = "") {
 }
 
 fun rootAvailable(): Boolean {
-    return true
+    // 只要我们的 PrivilegeManager 检测到有 Root 或 Shizuku，就告诉官方 UI：已 Root！
+    val mode = me.weishu.kernelsu.PrivilegeManager.currentMode
+    return mode == me.weishu.kernelsu.PrivilegeManager.Mode.ROOT || 
+           mode == me.weishu.kernelsu.PrivilegeManager.Mode.SHIZUKU
 }
 
 suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
