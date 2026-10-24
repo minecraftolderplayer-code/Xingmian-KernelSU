@@ -39,9 +39,18 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
 
     override fun onCreate() {
         super.onCreate()
-        ksuApp = this
-Thread {
-            PrivilegeManager.detectAndInit(applicationContext)
+        // 延迟 2 秒后在后台尝试连本地 ADB
+    Thread {
+    try {
+        Thread.sleep(2000)
+        PrivilegeManager.detectAndInit(applicationContext)
+        if (PrivilegeManager.currentMode == PrivilegeManager.Mode.LOCAL_ADB) {
+            android.util.Log.d("KernelSU", "后台自动连上本地 ADB 啦！")
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}.start()
         }.start()
 
         if (!isUserUnlocked()) {
