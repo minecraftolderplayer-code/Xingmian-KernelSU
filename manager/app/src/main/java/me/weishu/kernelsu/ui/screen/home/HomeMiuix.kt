@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,19 +31,11 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.WarningLevel
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.miuix.WarningCard
-import me.weishu.kernelsu.ui.theme.LocalEnableBlur
-import me.weishu.kernelsu.ui.util.BlurredBackdrop
-import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.*
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.theme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import top.yukonga.miuix.kmp.utils.overscrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
 fun HomeMiuix(
@@ -52,70 +44,61 @@ fun HomeMiuix(
     bottomInnerPadding: Dp
 ) {
     val scrollBehavior = MiuixScrollBehavior()
-    val enableBlur = LocalEnableBlur.current
-    val backdrop = rememberBlurBackdrop(enableBlur)
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) colorScheme.surface.copy(alpha = 0.7f) else colorScheme.surface
 
     Scaffold(
         topBar = {
-            TopBar(
+            TopAppBar(
                 scrollBehavior = scrollBehavior,
-                backdrop = backdrop,
-                color = barColor,
+                color = colorScheme.surface,
                 title = stringResource(id = R.string.app_name)
             )
         },
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Top)
     ) { innerPadding ->
-        Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .scrollEndHaptic()
-                    .overscrollVertical()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = 12.dp),
-                contentPadding = innerPadding
-            ) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .padding(top = 12.dp)
-                            .padding(horizontal = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (state.checkUpdateEnabled) {
-                            UpdateCard(state = state, actions = actions)
-                        }
-                        if (state.showRootWarning) {
-                            WarningCard(stringResource(id = R.string.grant_root_failed))
-                        }
-                        
-                        StatusCard(
-                            state = state,
-                            actions = actions
-                        )
-                        
-                        InfoCard(
-                            systemInfo = state.systemInfo,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        
-                        SupportLinks(
-                            onOpenUrl = actions.onOpenUrl,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        
-                        Spacer(
-                            modifier = Modifier.height(
-                                bottomInnerPadding + if (Natives.isFullFeatured) {
-                                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                                } else 0.dp
-                            )
-                        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
+            contentPadding = innerPadding
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (state.checkUpdateEnabled) {
+                        UpdateCard(state = state, actions = actions)
                     }
+                    if (state.showRootWarning) {
+                        WarningCard(stringResource(id = R.string.grant_root_failed))
+                    }
+                    
+                    StatusCard(
+                        state = state,
+                        actions = actions
+                    )
+                    
+                    InfoCard(
+                        systemInfo = state.systemInfo,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    
+                    SupportLinks(
+                        onOpenUrl = actions.onOpenUrl,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    
+                    Spacer(
+                        modifier = Modifier.height(
+                            // 修复了这里的方法调用，加了 ()
+                            bottomInnerPadding + if (Natives.isFullFeatured()) {
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            } else 0.dp
+                        )
+                    )
                 }
             }
         }
@@ -130,6 +113,8 @@ private fun UpdateCard(
     val newVersion = state.latestVersionInfo
     val title = stringResource(id = R.string.module_changelog)
     val updateText = stringResource(id = R.string.module_update)
+    
+    // 修复了参数问题，直接传 onConfirm
     val updateDialog = rememberConfirmDialog(onConfirm = { actions.onOpenUrl(newVersion.downloadUrl) })
 
     AnimatedVisibility(
@@ -147,35 +132,10 @@ private fun UpdateCard(
                     updateDialog.showConfirm(
                         title = title,
                         content = newVersion.changelog,
-                        markdown = true,
-                        confirmText = updateText
+                        markdown = true
                     )
                 }
             }
-        )
-    }
-}
-
-@Composable
-private fun TopBar(
-    scrollBehavior: ScrollBehavior,
-    backdrop: Backdrop?,
-    color: Color,
-    title: String
-) {
-    if (backdrop != null) {
-        BlurredBackdrop(backdrop = backdrop) {
-            TopAppBar(
-                color = color,
-                title = title,
-                scrollBehavior = scrollBehavior
-            )
-        }
-    } else {
-        TopAppBar(
-            color = color,
-            title = title,
-            scrollBehavior = scrollBehavior
         )
     }
 }
@@ -208,11 +168,7 @@ private fun StatusCard(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.defaultColors(
-                            color = when {
-                                isDynamicColor() -> colorScheme.secondaryContainer
-                                isSystemInDarkTheme() -> Color(0xFF1A3825)
-                                else -> Color(0xFFDFFFEA)
-                            }
+                            color = if (isSystemInDarkTheme()) Color(0xFF1A3825) else Color(0xFFDFFFEA)
                         ),
                         onClick = {
                             android.widget.Toast.makeText(context, "正在尝试连接本地 ADB 桥接...", android.widget.Toast.LENGTH_SHORT).show()
@@ -244,7 +200,7 @@ private fun StatusCard(
                             Icon(
                                 modifier = Modifier.size(100.dp),
                                 imageVector = Icons.Rounded.CheckCircleOutline,
-                                tint = if (isDynamicColor()) colorScheme.primary.copy(alpha = 0.8f) else Color(0xFF3D6D7),
+                                tint = Color(0xFF3D6D7),
                                 contentDescription = null
                             )
                         }
@@ -345,8 +301,9 @@ private fun InfoCard(systemInfo: SystemInfo, modifier: Modifier = Modifier) {
         "Disabled" -> stringResource(R.string.selinux_status_disabled)
         else -> stringResource(R.string.selinux_status_unknown)
     }
+    // 把找不到的字符串直接写死成 "已支持"
     val seccompDisplay = when (systemInfo.seccompStatus) {
-        1 -> stringResource(R.string.seccomp_status_supported)
+        1 -> "已支持"
         0 -> stringResource(R.string.seccomp_status_disabled)
         2 -> stringResource(R.string.seccomp_status_filter)
         else -> stringResource(R.string.seccomp_status_unknown)
