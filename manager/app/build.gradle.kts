@@ -251,17 +251,20 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
+
+    // 👇 新增的 5 个依赖（已补齐所有括号） 👇
     implementation("dev.mobile:dadb:1.2.9")
     implementation("org.bouncycastle:bcprov-jdk15to18:1.72")
     implementation(platform("org.jetbrains.kotlinx:kotlinx-serialization-bom:1.6.3"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+} // 👈 这个括号千万别漏了，它是 dependencies 的闭合
 
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
         )
     }
 }
