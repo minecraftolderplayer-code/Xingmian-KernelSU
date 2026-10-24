@@ -251,13 +251,16 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
+    // 核心 ADB 引擎
     implementation("dev.mobile:dadb:1.2.9") {
     exclude(group = "org.bouncycastle")
 }
+    // 引入适配 Android 的加密库
+    implementation("org.bouncycastle:bcprov-jdk15to18:1.72")
 
     testImplementation(libs.junit)
-implementation("dev.rikka.shizuku:api:13.0.0")
-implementation("dev.rikka.shizuku:provider:13.0.0")
+    implementation("dev.rikka.shizuku:api:13.0.0")
+    implementation("dev.rikka.shizuku:provider:13.0.0")
 }
 
 kotlin {
