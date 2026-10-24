@@ -62,6 +62,15 @@ val baseCppFlags = baseCFlags + "-fno-rtti"
 
 android {
     namespace = "me.weishu.kernelsu"
+packaging {
+    resources {
+        excludes += "META-INF/LICENSE.md"
+        excludes += "META-INF/LICENSE-notice.md"
+        excludes += "META-INF/AL2.0"
+        excludes += "META-INF/LGPL2.1"
+        excludes += "META-INF/INDEX.LIST"
+    }
+}
 
     buildTypes {
         debug {
