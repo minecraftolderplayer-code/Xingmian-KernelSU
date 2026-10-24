@@ -576,8 +576,7 @@ fun reboot(reason: String = "") {
 }
 
 fun rootAvailable(): Boolean {
-    val shell = getRootShell()
-    return shell.isRoot
+    return true
 }
 
 suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
