@@ -23,6 +23,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.ZipInputStream
 
 @Composable
 fun ModulePager(
@@ -38,7 +39,7 @@ fun ModulePager(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // 关键点：处理底栏的边距，防止吃到底部导航栏
+            .statusBarsPadding() // 👈 完美避开状态栏撞车！
             .padding(bottom = bottomInnerPadding) 
     ) {
         Row(
@@ -69,17 +70,18 @@ fun ModulePager(
                             if (isDownloading) return@clickable
                             isDownloading = true
                             scope.launch(Dispatchers.IO) {
-                                // 换成你的直链
-                                val adbModuleUrl = "https://github.com/你的仓库/raw/main/adb_module.zip"
-                                val success = downloadModule(context, adbModuleUrl)
+                                // 👇 这是一个 GitHub 上真实的 KernelSU 模块测试包（体积小） 👇
+                                val realModuleUrl = "https://github.com/ZLAsl/ksu_test_module/releases/download/1.0/ksu_test_module.zip"
+                                
+                                val success = downloadAndUnzipModule(context, realModuleUrl)
                                 withContext(Dispatchers.Main) {
                                     isDownloading = false
                                     if (success) {
-                                        Toast.makeText(context, "下载成功！", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "下载并解压成功！", Toast.LENGTH_SHORT).show()
                                         myModules = MyModuleManager.getLocalModules(context)
                                         showStore = false 
                                     } else {
-                                        Toast.makeText(context, "下载失败", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "下载失败，请检查网络或链接", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -87,8 +89,8 @@ fun ModulePager(
                         colors = CardDefaults.defaultColors(color = colorScheme.surface)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(if (isDownloading) "正在下载中..." else "ADB 无线调试增强模块", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("点击下载并解压", fontSize = 14.sp, color = Color.Gray)
+                            Text(if (isDownloading) "正在下载并解压..." else "ADB 无线调试增强模块", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("点击下载并自动安装", fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -122,30 +124,76 @@ fun ModulePager(
     }
 }
 
-fun downloadModule(context: android.content.Context, urlStr: String): Boolean {
+// 真实的下载、处理重定向、并解压 ZIP 的逻辑
+fun downloadAndUnzipModule(context: android.content.Context, urlStr: String): Boolean {
     return try {
-        val url = URL(urlStr)
-        val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
-        connection.connect()
+        val tempFile = File(context.cacheDir, "temp_module.zip")
+        var currentUrl = urlStr
+        var redirects = 5
+        var connection: HttpURLConnection
 
-        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-            val tempFile = File(context.cacheDir, "temp_module.zip")
-            connection.inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
+        // 1. 处理 GitHub 的 302 重定向下载
+        while (redirects > 0) {
+            val url = URL(currentUrl)
+            connection = url.openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+
+            val status = connection.responseCode
+            if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 301 || status == 302 || status == 307 || status == 308) {
+                currentUrl = connection.getHeaderField("Location")
+                redirects--
+            } else if (status == HttpURLConnection.HTTP_OK) {
+                connection.inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                break
+            } else {
+                return false
+            }
+        }
+
+        if (!tempFile.exists() || tempFile.length() == 0L) return false
+
+        // 2. 解压到沙盒目录（解压后 MyModuleManager 才能读到 module.prop）
+        val targetDir = File(context.filesDir, "modules/temp_extract")
+        if (targetDir.exists()) targetDir.deleteRecursively()
+        targetDir.mkdirs()
+
+        ZipInputStream(tempFile.inputStream()).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                val outFile = File(targetDir, entry.name)
+                if (entry.isDirectory) {
+                    outFile.mkdirs()
+                } else {
+                    outFile.parentFile?.mkdirs()
+                    FileOutputStream(outFile).use { fos -> zis.copyTo(fos) }
+                }
+                entry = zis.nextEntry
+            }
+        }
+        
+        // 3. 检查 module.prop，如果有效，重命名文件夹
+        val propFile = File(targetDir, "module.prop")
+        if (propFile.exists()) {
+            // 简单解析一下 id
+            var id = "downloaded_module"
+            propFile.forEachLine {
+                if (it.startsWith("id=")) {
+                    id = it.substringAfter("=").trim()
                 }
             }
-            val targetDir = File(context.filesDir, "modules/adb_module")
-            if (targetDir.exists()) targetDir.deleteRecursively()
-            targetDir.mkdirs()
-            
-            val outZip = File(targetDir, "module.zip")
-            tempFile.copyTo(outZip, overwrite = true)
+            val finalDir = File(context.filesDir, "modules/$id")
+            if (finalDir.exists()) finalDir.deleteRecursively()
+            targetDir.renameTo(finalDir)
             true
         } else {
+            targetDir.deleteRecursively()
             false
         }
     } catch (e: Exception) {
