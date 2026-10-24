@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,17 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.PrivilegeManager
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.WarningLevel
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.miuix.WarningCard
-import top.yukonga.miuix.kmp.basic.*
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
 fun HomePagerMiuix(
@@ -110,57 +109,49 @@ private fun StatusCard(state: HomeUiState, actions: HomeActions) {
     Column {
         if (state.ksuVersion != null) {
             val workingMode = if (state.lkmMode == null) null else if (state.lkmMode) "LKM" else "GKI"
-            val workingText = stringResource(R.string.home_working) + (if (state.isSafeMode) " [安全模式]" else "")
+            val workingText = stringResource(R.string.home_working)
 
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (isSystemInDarkTheme()) Color(0xFF1A3825) else Color(0xFFDFFFEA)
-                    ),
-                    onClick = { if (!showLoading) showLoading = true },
-                    showIndication = !state.isLateLoadMode,
-                    pressFeedbackType = PressFeedbackType.Tilt
-                ) {
-                    Box(modifier = Modifier.fillMaxSize().offset(27.dp, 31.dp), contentAlignment = Alignment.BottomEnd) {
-                        // 修复了这里的参数顺序：imageVector 必须是第一位
+            // 全部改用原生 Material3 的 Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSystemInDarkTheme()) Color(0xFF1A3825) else Color(0xFFDFFFEA)
+                ),
+                onClick = { if (!showLoading) showLoading = true }
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
                         Icon(
                             imageVector = Icons.Rounded.CheckCircleOutline,
                             contentDescription = null,
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier.size(80.dp),
                             tint = Color(0xFF3D6D7)
                         )
                     }
-                    if (workingMode != null) {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp, 18.dp), contentAlignment = Alignment.BottomStart) {
-                            Text(workingMode, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        if (workingMode != null) {
+                            Text(workingMode, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
-                    }
-                    Box(modifier = Modifier.fillMaxSize().padding(16.dp, 14.dp), contentAlignment = Alignment.TopStart) {
-                        Column {
-                            Text(workingText, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(stringResource(R.string.home_working_version, "${state.ksuVersion}-${state.kernelUAPIVersion}"), fontSize = 15.sp)
-                            }
-                        }
+                        Text(workingText, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(stringResource(R.string.home_working_version, "${state.ksuVersion}-${state.kernelUAPIVersion}"), fontSize = 14.sp)
                     }
                 }
             }
         } else {
-            Card(onClick = actions.onInstallClick, showIndication = true, pressFeedbackType = PressFeedbackType.Tilt) {
-                BasicComponent(
-                    title = stringResource(R.string.home_not_installed),
-                    summary = stringResource(R.string.home_click_to_install),
-                    startAction = { 
-                        // 修复了这里的参数顺序
-                        Icon(
-                            imageVector = Icons.Rounded.ErrorOutline,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp)
-                        ) 
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = actions.onInstallClick
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = Color.Red)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(stringResource(R.string.home_not_installed), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.home_click_to_install), fontSize = 12.sp, color = Color.Gray)
                     }
-                )
+                }
             }
         }
     }
@@ -182,35 +173,22 @@ private fun UpdateCard(state: HomeUiState, actions: HomeActions) {
     }
 }
 
+// 彻底抛弃 Miuix 的 ArrowPreference，改用原生 Card
 @Composable
 private fun SupportLinks(onOpenUrl: (String) -> Unit, modifier: Modifier = Modifier) {
-    Card(modifier) {
-        ArrowPreference(
-            title = stringResource(R.string.home_support_title),
-            summary = stringResource(R.string.home_support_content),
-            startAction = { 
-                // 修复了这里的参数顺序
-                Icon(
-                    imageVector = Icons.Filled.VolunteerActivism,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
-                ) 
-            },
-            onClick = { onOpenUrl("https://patreon.com/weishu") }
-        )
-        ArrowPreference(
-            title = stringResource(R.string.home_learn_kernelsu),
-            summary = stringResource(R.string.home_click_to_learn_kernelsu),
-            startAction = { 
-                // 修复了这里的参数顺序
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
-                ) 
-            },
-            onClick = { onOpenUrl(stringResource(R.string.home_learn_kernelsu_url)) }
-        )
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
+                Icon(Icons.Filled.VolunteerActivism, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(stringResource(R.string.home_support_title), fontWeight = FontWeight.Medium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(stringResource(R.string.home_learn_kernelsu), fontWeight = FontWeight.Medium)
+            }
+        }
     }
 }
 
@@ -240,15 +218,10 @@ private fun InfoCard(systemInfo: SystemInfo, modifier: Modifier = Modifier) {
 @Composable
 private fun InfoText(icon: ImageVector, title: String, content: String, bottomPadding: Dp = 24.dp) {
     Row(Modifier.fillMaxWidth().padding(bottom = bottomPadding), verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            modifier = Modifier.padding(end = 12.dp).size(24.dp),
-            tint = colorScheme.onSurface
-        )
+        Icon(imageVector = icon, contentDescription = title, modifier = Modifier.padding(end = 12.dp).size(24.dp), tint = Color.Gray)
         Column {
-            Text(title, fontSize = MiuixTheme.textStyles.headline1.fontSize, fontWeight = FontWeight.Medium)
-            Text(content, fontSize = MiuixTheme.textStyles.body2.fontSize, color = colorScheme.onSurfaceVariantSummary, modifier = Modifier.padding(top = 2.dp))
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(content, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
