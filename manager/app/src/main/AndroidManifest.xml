@@ -17,7 +17,10 @@
         tools:node="remove" />
 
     <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
-
+    <permission
+        android:name="me.weishu.kernelsu.permission.ACCESS_SHELL"
+        android:protectionLevel="dangerous" /> 
+   
     <application
         android:name=".KernelSUApplication"
         android:allowBackup="true"
@@ -116,6 +119,15 @@
             </intent-filter>
         </receiver>
         <provider android:name="rikka.shizuku.ShizukuProvider" android:authorities="${applicationId}.shizuku" android:multiprocess="false" android:enabled="true" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        <service
+    android:name=".ShellService"
+    android:exported="true"
+    android:permission="me.weishu.kernelsu.permission.ACCESS_SHELL">
+    <intent-filter>
+        <action android:name="me.weishu.kernelsu.action.SHELL_SERVICE" />
+    </intent-filter>
+ </service>
+
     </application>
 
 </manifest>
